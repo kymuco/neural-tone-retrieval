@@ -29,7 +29,7 @@ Out of scope for v1:
 - exact knob-by-knob preset reconstruction
 - redistribution of commercial plugins, IR libraries, or restricted audio packs
 
-## Planned Repository Layout
+## Repository Layout
 
 ```text
 .
@@ -41,11 +41,24 @@ Out of scope for v1:
 |-- scripts/
 |-- src/
 |   `-- neural_tone_retrieval/
+|       |-- api.py
+|       |-- settings.py
+|       |-- utils.py
+|       |-- catalog/
+|       `-- schemas/
 |-- tests/
 `-- data/
 ```
 
 Some directories such as `data/`, `artifacts/`, `runs/`, and `models/` are expected to stay untracked by default unless there is a clear reason to version small example assets.
+
+## Implemented V0 Core
+
+The repository now includes the first schema and registry layer:
+
+- `schemas/` for artifacts, dataset records, chain specs, retrieval records, and run provenance
+- `catalog/` for manifests, split propagation, and in-memory validation/indexing
+- `api.py` as the stable public Python surface for future CLI and service layers
 
 ## Licensing
 
@@ -55,12 +68,12 @@ Some directories such as `data/`, `artifacts/`, `runs/`, and `models/` are expec
 
 ## Current Status
 
-The repository is in bootstrap mode. The next milestones are:
+The repository has a bootstrapped package layout and schema layer. The next milestones are:
 
-1. define the dataset schema and artifact model
-2. implement the offline re-amp generation pipeline
-3. ship a retrieval baseline with feature extraction and nearest-neighbor search
-4. add embedding training and evaluation
+1. implement the offline re-amp generation pipeline
+2. ship a retrieval baseline with feature extraction and nearest-neighbor search
+3. add embedding training and evaluation
+4. layer a thin CLI on top of the public API
 
 ## Suggested GitHub Description
 

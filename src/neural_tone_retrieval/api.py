@@ -12,6 +12,7 @@ from neural_tone_retrieval.catalog import (
     resolve_render_split,
     resolve_source_clip_split,
 )
+from neural_tone_retrieval.ingest import ingest_dataset_directory, inspect_wav_file, load_sidecar_metadata
 from neural_tone_retrieval.schemas import (
     ArtifactFormat,
     ArtifactRecord,
@@ -171,8 +172,11 @@ __all__ = [
     "create_chain_stage",
     "create_dataset_manifest",
     "create_registry",
+    "ingest_dataset_directory",
+    "inspect_wav_file",
     "load_controlled_reamp_config",
     "load_dataset_manifest",
+    "load_sidecar_metadata",
     "render_controlled_reamp_config_toml",
     "resolve_render_split",
     "resolve_source_clip_split",

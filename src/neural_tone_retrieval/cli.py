@@ -5,13 +5,24 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from neural_tone_retrieval.api import ingest_dataset_directory, load_controlled_reamp_config, load_dataset_manifest
 from neural_tone_retrieval.examples import write_example_bundle
-from neural_tone_retrieval.serde import load_controlled_reamp_config, load_dataset_manifest
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ntr", description="Neural Tone Retrieval CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    dataset_parser = subparsers.add_parser("dataset", help="Build manifests from raw DI audio")
+    dataset_subparsers = dataset_parser.add_subparsers(dest="dataset_command", required=True)
+    dataset_ingest = dataset_subparsers.add_parser("ingest", help="Scan WAV files into a manifest")
+    dataset_ingest.add_argument("input_dir")
+    dataset_ingest.add_argument("output_manifest")
+    dataset_ingest.add_argument("--dataset-name", default="neural-tone-retrieval")
+    dataset_ingest.add_argument("--dataset-version", default="0.1.0")
+    dataset_ingest.add_argument("--pattern", default="*.wav")
+    dataset_ingest.add_argument("--non-recursive", action="store_true")
+    dataset_ingest.add_argument("--compute-sha256", action="store_true")
 
     manifest_parser = subparsers.add_parser("manifest", help="Inspect or validate manifests")
     manifest_subparsers = manifest_parser.add_subparsers(dest="manifest_command", required=True)
@@ -37,6 +48,23 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if args.command == "dataset":
+        if args.dataset_command == "ingest":
+            manifest = ingest_dataset_directory(
+                args.input_dir,
+                output_manifest_path=args.output_manifest,
+                dataset_name=args.dataset_name,
+                dataset_version=args.dataset_version,
+                pattern=args.pattern,
+                recursive=not args.non_recursive,
+                compute_sha256=args.compute_sha256,
+            )
+            print(f"Ingest OK: {args.output_manifest}")
+            print(f"dataset={manifest.dataset_name} version={manifest.dataset_version}")
+            for key, value in manifest.summary().items():
+                print(f"{key}={value}")
+            return 0
 
     if args.command == "manifest":
         manifest = load_dataset_manifest(args.path)

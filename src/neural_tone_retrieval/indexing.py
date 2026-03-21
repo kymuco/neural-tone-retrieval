@@ -14,6 +14,7 @@ from neural_tone_retrieval.schemas import (
     ArtifactRecord,
     ArtifactType,
     DistanceMetric,
+    FeatureSubjectType,
     QueryType,
     RunRecord,
     RunStatus,
@@ -44,8 +45,11 @@ class BaselineIndexItem:
     feature_id: str
     feature_artifact_id: str
     subject_artifact_id: str
+    subject_type: str
     source_clip_id: str
     content_group_id: str
+    candidate_render_id: str | None
+    chain_id: str | None
     preview_uri: str
     split: str | None
     vector: tuple[float, ...]
@@ -69,6 +73,7 @@ def build_baseline_index(
     extractor_id: str = "baseline-handcrafted-v1",
     distance_metric: DistanceMetric = DistanceMetric.COSINE,
     index_dir_name: str = "indices",
+    subject_type: FeatureSubjectType | None = None,
 ) -> DatasetManifest:
     manifest_root_path = Path(manifest_root)
     output_manifest = Path(output_manifest_path)
@@ -78,7 +83,11 @@ def build_baseline_index(
 
     artifact_index = {artifact.artifact_id: artifact for artifact in manifest.artifacts}
     source_by_artifact_id = {source.artifact_id: source for source in manifest.source_clips}
+    source_by_source_clip_id = {source.source_clip_id: source for source in manifest.source_clips}
+    render_by_artifact_id = {render.artifact_id: render for render in manifest.renders}
     selected_features = [feature for feature in manifest.features if feature.extractor_id == extractor_id]
+    if subject_type is not None:
+        selected_features = [feature for feature in selected_features if feature.subject_type == subject_type]
     if not selected_features:
         raise ValueError(f"No feature records found for extractor_id={extractor_id!r}")
 
@@ -98,21 +107,48 @@ def build_baseline_index(
 
     index_items: list[BaselineIndexItem] = []
     for feature, feature_map in feature_payloads:
-        source_clip = source_by_artifact_id.get(feature.subject_artifact_id)
-        if source_clip is None:
-            raise KeyError(f"No source clip found for subject_artifact_id={feature.subject_artifact_id}")
-        source_artifact = artifact_index.get(source_clip.artifact_id)
-        if source_artifact is None:
-            raise KeyError(f"Unknown source artifact_id={source_clip.artifact_id}")
+        subject_artifact = artifact_index.get(feature.subject_artifact_id)
+        if subject_artifact is None:
+            raise KeyError(f"Unknown subject artifact_id={feature.subject_artifact_id}")
+        source_clip_id: str
+        content_group_id: str
+        candidate_render_id: str | None
+        chain_id: str | None
+        if feature.subject_type == FeatureSubjectType.SOURCE_CLIP:
+            source_clip = source_by_artifact_id.get(feature.subject_artifact_id)
+            if source_clip is None:
+                raise KeyError(
+                    f"No source clip found for subject_artifact_id={feature.subject_artifact_id}"
+                )
+            source_clip_id = source_clip.source_clip_id
+            content_group_id = source_clip.content_group_id
+            candidate_render_id = None
+            chain_id = None
+        else:
+            render = render_by_artifact_id.get(feature.subject_artifact_id)
+            if render is None:
+                raise KeyError(
+                    f"No render record found for subject_artifact_id={feature.subject_artifact_id}"
+                )
+            source_clip = source_by_source_clip_id.get(render.source_clip_id)
+            if source_clip is None:
+                raise KeyError(f"Unknown source_clip_id for render {render.render_id}: {render.source_clip_id}")
+            source_clip_id = render.source_clip_id
+            content_group_id = source_clip.content_group_id
+            candidate_render_id = render.render_id
+            chain_id = render.chain_id
         vector = standardize_feature_vector(feature_map, feature_keys=feature_keys, feature_stats=feature_stats)
         index_items.append(
             BaselineIndexItem(
                 feature_id=feature.feature_id,
                 feature_artifact_id=feature.artifact_id,
                 subject_artifact_id=feature.subject_artifact_id,
-                source_clip_id=source_clip.source_clip_id,
-                content_group_id=source_clip.content_group_id,
-                preview_uri=source_artifact.uri,
+                subject_type=feature.subject_type.value,
+                source_clip_id=source_clip_id,
+                content_group_id=content_group_id,
+                candidate_render_id=candidate_render_id,
+                chain_id=chain_id,
+                preview_uri=subject_artifact.uri,
                 split=feature.split.value if feature.split is not None else None,
                 vector=tuple(vector),
             )
@@ -142,6 +178,7 @@ def build_baseline_index(
             "distance_metric": distance_metric.value,
             "feature_keys": list(feature_keys),
             "item_count": len(index_items),
+            "subject_type": subject_type.value if subject_type is not None else "all",
         },
     )
     run = RunRecord(
@@ -151,6 +188,7 @@ def build_baseline_index(
             "manifest_root": str(manifest_root_path),
             "extractor_id": extractor_id,
             "distance_metric": distance_metric.value,
+            "subject_type": subject_type.value if subject_type is not None else "all",
         },
         outputs_json={
             "index_artifact_id": index_artifact.artifact_id,
@@ -217,11 +255,11 @@ def search_baseline_index(
             SearchHit(
                 query_id=query.query_id,
                 rank=rank,
-                candidate_render_id=None,
                 candidate_artifact_id=item.subject_artifact_id,
                 source_clip_id=item.source_clip_id,
                 content_group_id=item.content_group_id,
-                chain_id=None,
+                candidate_render_id=item.candidate_render_id,
+                chain_id=item.chain_id,
                 score=round(score, 8),
                 distance=round(distance, 8),
                 preview_uri=item.preview_uri,
@@ -266,8 +304,11 @@ def save_baseline_index(index: BaselineFeatureIndex, path: str | Path) -> Path:
                 "feature_id": item.feature_id,
                 "feature_artifact_id": item.feature_artifact_id,
                 "subject_artifact_id": item.subject_artifact_id,
+                "subject_type": item.subject_type,
                 "source_clip_id": item.source_clip_id,
                 "content_group_id": item.content_group_id,
+                "candidate_render_id": item.candidate_render_id,
+                "chain_id": item.chain_id,
                 "preview_uri": item.preview_uri,
                 "split": item.split,
                 "vector": list(item.vector),
@@ -286,8 +327,11 @@ def load_baseline_index(path: str | Path) -> BaselineFeatureIndex:
             feature_id=require_non_empty(item["feature_id"], "feature_id"),
             feature_artifact_id=require_non_empty(item["feature_artifact_id"], "feature_artifact_id"),
             subject_artifact_id=require_non_empty(item["subject_artifact_id"], "subject_artifact_id"),
+            subject_type=require_non_empty(item["subject_type"], "subject_type"),
             source_clip_id=require_non_empty(item["source_clip_id"], "source_clip_id"),
             content_group_id=require_non_empty(item["content_group_id"], "content_group_id"),
+            candidate_render_id=item.get("candidate_render_id"),
+            chain_id=item.get("chain_id"),
             preview_uri=require_non_empty(item["preview_uri"], "preview_uri"),
             split=item.get("split"),
             vector=tuple(float(value) for value in item["vector"]),

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import StrEnum
 
 from neural_tone_retrieval.schemas.dataset import SplitName
 from neural_tone_retrieval.utils import (
@@ -17,12 +18,18 @@ from neural_tone_retrieval.utils import (
 )
 
 
+class FeatureSubjectType(StrEnum):
+    SOURCE_CLIP = "source_clip"
+    RENDERED_CLIP = "rendered_clip"
+
+
 @dataclass(slots=True, frozen=True)
 class FeatureRecord(RecordMixin):
     artifact_id: str
     subject_artifact_id: str
     extractor_id: str
     feature_id: str = ""
+    subject_type: FeatureSubjectType = FeatureSubjectType.SOURCE_CLIP
     feature_set: str = "baseline_handcrafted"
     feature_count: int = 0
     split: SplitName | None = None
@@ -56,5 +63,6 @@ class FeatureRecord(RecordMixin):
             "artifact_id": self.artifact_id,
             "subject_artifact_id": self.subject_artifact_id,
             "extractor_id": self.extractor_id,
+            "subject_type": self.subject_type,
             "feature_set": self.feature_set,
         }

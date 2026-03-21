@@ -19,6 +19,7 @@ from neural_tone_retrieval.schemas import (
     DistanceMetric,
     EmbeddingRecord,
     FeatureRecord,
+    FeatureSubjectType,
     FeatureSet,
     QueryType,
     RenderRecord,
@@ -321,6 +322,9 @@ def feature_from_dict(payload: object) -> FeatureRecord:
         ),
         extractor_id=_require_str(mapping["extractor_id"], "feature.extractor_id"),
         feature_id=_get_str(mapping, "feature_id", default=""),
+        subject_type=FeatureSubjectType(
+            _get_str(mapping, "subject_type", default=FeatureSubjectType.SOURCE_CLIP.value)
+        ),
         feature_set=_get_str(mapping, "feature_set", default="baseline_handcrafted"),
         feature_count=_get_int(mapping, "feature_count", default=0),
         split=SplitName(split) if split is not None else None,

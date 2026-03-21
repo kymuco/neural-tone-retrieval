@@ -78,7 +78,9 @@ python -m neural_tone_retrieval config show examples/controlled_reamp/controlled
 python -m neural_tone_retrieval dataset ingest data/raw manifests/source_manifest.json
 python -m neural_tone_retrieval render build manifests/source_with_chains.json data/raw manifests/render_manifest.json
 python -m neural_tone_retrieval features extract manifests/source_manifest.json data/raw manifests/features_manifest.json
+python -m neural_tone_retrieval features extract manifests/render_manifest.json manifests manifests/render_features_manifest.json --subject-type rendered_clip
 python -m neural_tone_retrieval index build manifests/features_manifest.json manifests/index_manifest.json
+python -m neural_tone_retrieval index build manifests/render_features_manifest.json manifests/render_index_manifest.json --subject-type rendered_clip
 python -m neural_tone_retrieval search query manifests/index_manifest.json query.wav --top-k 5
 ```
 
@@ -106,12 +108,15 @@ Optional sidecar metadata can live next to a WAV file as `clip.json` and may inc
 
 ## Current Status
 
-The repository has a bootstrapped package layout and schema layer. The next milestones are:
+The repository now includes a working V0 end-to-end baseline:
 
-1. implement the offline re-amp generation pipeline
-2. ship a retrieval baseline with feature extraction and nearest-neighbor search
-3. add embedding training and evaluation
-4. layer a thin CLI on top of the public API
+1. source DI ingest with sidecar metadata
+2. deterministic offline rendering through declarative chain specs
+3. feature extraction for both `source_clip` and `rendered_clip` subjects
+4. nearest-neighbor index build and search over baseline handcrafted features
+5. a thin CLI on top of the public API
+
+The next milestone is learned embeddings and retrieval evaluation on the controlled rendered dataset.
 
 ## Suggested GitHub Description
 

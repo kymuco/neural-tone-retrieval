@@ -10,6 +10,7 @@ from neural_tone_retrieval.api import (
     build_feature_manifest,
     build_render_manifest,
     DistanceMetric,
+    FeatureSubjectType,
     ingest_dataset_directory,
     load_controlled_reamp_config,
     load_dataset_manifest,
@@ -58,6 +59,11 @@ def build_parser() -> argparse.ArgumentParser:
     features_extract.add_argument("output_manifest")
     features_extract.add_argument("--extractor-id", default="baseline-handcrafted-v1")
     features_extract.add_argument("--feature-dir", default="features")
+    features_extract.add_argument(
+        "--subject-type",
+        default=FeatureSubjectType.SOURCE_CLIP.value,
+        choices=[item.value for item in FeatureSubjectType],
+    )
 
     index_parser = subparsers.add_parser("index", help="Build a nearest-neighbor index")
     index_subparsers = index_parser.add_subparsers(dest="index_command", required=True)
@@ -67,6 +73,11 @@ def build_parser() -> argparse.ArgumentParser:
     index_build.add_argument("--extractor-id", default="baseline-handcrafted-v1")
     index_build.add_argument("--distance-metric", default="cosine")
     index_build.add_argument("--index-dir", default="indices")
+    index_build.add_argument(
+        "--subject-type",
+        default="all",
+        choices=["all", *[item.value for item in FeatureSubjectType]],
+    )
 
     search_parser = subparsers.add_parser("search", help="Run nearest-neighbor search")
     search_subparsers = search_parser.add_subparsers(dest="search_command", required=True)
@@ -148,6 +159,7 @@ def main(argv: list[str] | None = None) -> int:
                 output_manifest_path=args.output_manifest,
                 extractor_id=args.extractor_id,
                 feature_dir_name=args.feature_dir,
+                subject_type=FeatureSubjectType(args.subject_type),
             )
             print(f"Features OK: {args.output_manifest}")
             print(
@@ -168,6 +180,7 @@ def main(argv: list[str] | None = None) -> int:
                 extractor_id=args.extractor_id,
                 distance_metric=DistanceMetric(args.distance_metric),
                 index_dir_name=args.index_dir,
+                subject_type=None if args.subject_type == "all" else FeatureSubjectType(args.subject_type),
             )
             print(f"Index OK: {args.output_manifest}")
             print(
@@ -200,6 +213,8 @@ def main(argv: list[str] | None = None) -> int:
                             f"score={score}",
                             f"distance={distance}",
                             f"source_clip_id={hit.source_clip_id}",
+                            f"render_id={hit.candidate_render_id or ''}",
+                            f"chain_id={hit.chain_id or ''}",
                             f"content_group_id={hit.content_group_id}",
                             f"preview_uri={hit.preview_uri or ''}",
                         )

@@ -16,6 +16,7 @@ from neural_tone_retrieval.schemas import (
     ArtifactRecord,
     ArtifactType,
     FeatureRecord,
+    FeatureSubjectType,
     RunRecord,
     RunStatus,
     RunType,
@@ -76,6 +77,7 @@ def build_feature_manifest(
     output_manifest_path: str | Path,
     extractor_id: str = "baseline-handcrafted-v1",
     feature_dir_name: str = "features",
+    subject_type: FeatureSubjectType = FeatureSubjectType.SOURCE_CLIP,
 ) -> DatasetManifest:
     audio_root_path = Path(audio_root)
     output_manifest = Path(output_manifest_path)
@@ -84,6 +86,7 @@ def build_feature_manifest(
     feature_dir.mkdir(parents=True, exist_ok=True)
 
     artifact_index = {artifact.artifact_id: artifact for artifact in manifest.artifacts}
+    source_by_source_clip_id = {source.source_clip_id: source for source in manifest.source_clips}
     existing_pairs = {
         (feature.subject_artifact_id, feature.extractor_id)
         for feature in manifest.features
@@ -92,25 +95,34 @@ def build_feature_manifest(
     new_artifacts: list[ArtifactRecord] = []
     new_features: list[FeatureRecord] = []
 
-    for source_clip in manifest.source_clips:
-        if (source_clip.artifact_id, extractor_id) in existing_pairs:
+    for subject in iter_feature_subjects(
+        manifest,
+        subject_type=subject_type,
+        artifact_index=artifact_index,
+        source_by_source_clip_id=source_by_source_clip_id,
+    ):
+        if (subject["subject_artifact_id"], extractor_id) in existing_pairs:
             raise ValueError(
-                f"Feature artifact already exists for subject {source_clip.artifact_id} "
+                f"Feature artifact already exists for subject {subject['subject_artifact_id']} "
                 f"and extractor {extractor_id}"
             )
-        source_artifact = artifact_index.get(source_clip.artifact_id)
-        if source_artifact is None:
-            raise KeyError(f"Unknown artifact_id for source clip {source_clip.source_clip_id}")
-        audio_path = audio_root_path / Path(source_artifact.uri)
+        subject_artifact = artifact_index.get(subject["subject_artifact_id"])
+        if subject_artifact is None:
+            raise KeyError(f"Unknown subject artifact_id {subject['subject_artifact_id']}")
+        audio_path = audio_root_path / Path(subject_artifact.uri)
         feature_values = extract_baseline_wav_features(audio_path)
         feature_payload = {
             "extractor_id": extractor_id,
-            "subject_artifact_id": source_artifact.artifact_id,
-            "source_clip_id": source_clip.source_clip_id,
-            "content_group_id": source_clip.content_group_id,
+            "subject_artifact_id": subject["subject_artifact_id"],
+            "subject_type": subject["subject_type"].value,
+            "source_clip_id": subject["source_clip_id"],
+            "content_group_id": subject["content_group_id"],
+            "chain_id": subject["chain_id"],
+            "render_id": subject["render_id"],
             "features": feature_values,
         }
-        feature_filename = f"{source_clip.source_clip_id}__{_sanitize_name(extractor_id)}.json"
+        feature_stem = subject["render_id"] or subject["source_clip_id"]
+        feature_filename = f"{feature_stem}__{_sanitize_name(extractor_id)}.json"
         feature_path = feature_dir / feature_filename
         feature_path.write_text(
             json.dumps(feature_payload, ensure_ascii=True, indent=2) + "\n",
@@ -122,19 +134,21 @@ def build_feature_manifest(
             uri=feature_uri,
             format=ArtifactFormat.JSON,
             size_bytes=feature_path.stat().st_size,
-            parent_artifact_ids=(source_artifact.artifact_id,),
+            parent_artifact_ids=(subject_artifact.artifact_id,),
             attrs={
                 "extractor_id": extractor_id,
                 "feature_count": len(feature_values),
-                "subject_artifact_id": source_artifact.artifact_id,
+                "subject_artifact_id": subject_artifact.artifact_id,
+                "subject_type": subject["subject_type"].value,
             },
         )
         feature_record = FeatureRecord(
             artifact_id=feature_artifact.artifact_id,
-            subject_artifact_id=source_artifact.artifact_id,
+            subject_artifact_id=subject_artifact.artifact_id,
             extractor_id=extractor_id,
+            subject_type=subject["subject_type"],
             feature_count=len(feature_values),
-            split=resolve_source_clip_split(source_clip, manifest.split_assignments),
+            split=subject["split"],
         )
         new_artifacts.append(feature_artifact)
         new_features.append(feature_record)
@@ -145,6 +159,7 @@ def build_feature_manifest(
         inputs_json={
             "audio_root": str(audio_root_path),
             "extractor_id": extractor_id,
+            "subject_type": subject_type.value,
         },
         outputs_json={
             "feature_artifacts": len(new_artifacts),
@@ -167,6 +182,51 @@ def build_feature_manifest(
     )
     save_dataset_manifest(augmented, output_manifest)
     return augmented
+
+
+def iter_feature_subjects(
+    manifest: DatasetManifest,
+    *,
+    subject_type: FeatureSubjectType,
+    artifact_index: dict[str, ArtifactRecord],
+    source_by_source_clip_id: dict[str, object],
+) -> list[dict[str, object]]:
+    subjects: list[dict[str, object]] = []
+    if subject_type == FeatureSubjectType.SOURCE_CLIP:
+        for source_clip in manifest.source_clips:
+            subjects.append(
+                {
+                    "subject_type": subject_type,
+                    "subject_artifact_id": source_clip.artifact_id,
+                    "source_clip_id": source_clip.source_clip_id,
+                    "content_group_id": source_clip.content_group_id,
+                    "chain_id": None,
+                    "render_id": None,
+                    "split": resolve_source_clip_split(source_clip, manifest.split_assignments),
+                }
+            )
+        return subjects
+
+    if not manifest.renders:
+        raise ValueError("Feature extraction for rendered clips requires at least one render record")
+    for render in manifest.renders:
+        source_clip = source_by_source_clip_id.get(render.source_clip_id)
+        if source_clip is None:
+            raise KeyError(f"Unknown source_clip_id for render {render.render_id}: {render.source_clip_id}")
+        if render.artifact_id not in artifact_index:
+            raise KeyError(f"Unknown artifact_id for render {render.render_id}: {render.artifact_id}")
+        subjects.append(
+            {
+                "subject_type": subject_type,
+                "subject_artifact_id": render.artifact_id,
+                "source_clip_id": render.source_clip_id,
+                "content_group_id": source_clip.content_group_id,
+                "chain_id": render.chain_id,
+                "render_id": render.render_id,
+                "split": render.split,
+            }
+        )
+    return subjects
 
 
 def load_wav_as_mono_floats(path: str | Path) -> tuple[list[float], int]:

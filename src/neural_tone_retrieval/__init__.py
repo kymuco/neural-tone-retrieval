@@ -4,6 +4,7 @@ from neural_tone_retrieval.api import (
     ArtifactFormat,
     ArtifactRecord,
     ArtifactType,
+    build_baseline_index,
     build_feature_manifest,
     CatalogRegistry,
     ChainSpec,
@@ -44,6 +45,7 @@ from neural_tone_retrieval.api import (
     resolve_render_split,
     resolve_source_clip_split,
     save_dataset_manifest,
+    search_baseline_index,
 )
 from neural_tone_retrieval.settings import PACKAGE_VERSION
 
@@ -53,6 +55,7 @@ __all__ = [
     "ArtifactFormat",
     "ArtifactRecord",
     "ArtifactType",
+    "build_baseline_index",
     "build_feature_manifest",
     "CatalogRegistry",
     "ChainSpec",
@@ -94,4 +97,5 @@ __all__ = [
     "resolve_render_split",
     "resolve_source_clip_split",
     "save_dataset_manifest",
+    "search_baseline_index",
 ]

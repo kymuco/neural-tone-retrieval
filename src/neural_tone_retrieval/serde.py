@@ -367,10 +367,6 @@ def search_hit_from_dict(payload: object) -> SearchHit:
     return SearchHit(
         query_id=_require_str(mapping["query_id"], "search_hit.query_id"),
         rank=_get_int(mapping, "rank"),
-        candidate_render_id=_require_str(
-            mapping["candidate_render_id"],
-            "search_hit.candidate_render_id",
-        ),
         candidate_artifact_id=_require_str(
             mapping["candidate_artifact_id"],
             "search_hit.candidate_artifact_id",
@@ -380,7 +376,11 @@ def search_hit_from_dict(payload: object) -> SearchHit:
             mapping["content_group_id"],
             "search_hit.content_group_id",
         ),
-        chain_id=_require_str(mapping["chain_id"], "search_hit.chain_id"),
+        candidate_render_id=_optional_str(
+            mapping.get("candidate_render_id"),
+            "search_hit.candidate_render_id",
+        ),
+        chain_id=_optional_str(mapping.get("chain_id"), "search_hit.chain_id"),
         score=_get_optional_float(mapping, "score"),
         distance=_get_optional_float(mapping, "distance"),
         amp_family=_optional_str(mapping.get("amp_family"), "search_hit.amp_family"),

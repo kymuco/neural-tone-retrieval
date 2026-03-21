@@ -6,10 +6,13 @@ import argparse
 from pathlib import Path
 
 from neural_tone_retrieval.api import (
+    build_baseline_index,
     build_feature_manifest,
+    DistanceMetric,
     ingest_dataset_directory,
     load_controlled_reamp_config,
     load_dataset_manifest,
+    search_baseline_index,
 )
 from neural_tone_retrieval.examples import write_example_bundle
 
@@ -40,6 +43,23 @@ def build_parser() -> argparse.ArgumentParser:
     features_extract.add_argument("output_manifest")
     features_extract.add_argument("--extractor-id", default="baseline-handcrafted-v1")
     features_extract.add_argument("--feature-dir", default="features")
+
+    index_parser = subparsers.add_parser("index", help="Build a nearest-neighbor index")
+    index_subparsers = index_parser.add_subparsers(dest="index_command", required=True)
+    index_build = index_subparsers.add_parser("build", help="Build a baseline feature index")
+    index_build.add_argument("input_manifest")
+    index_build.add_argument("output_manifest")
+    index_build.add_argument("--extractor-id", default="baseline-handcrafted-v1")
+    index_build.add_argument("--distance-metric", default="cosine")
+    index_build.add_argument("--index-dir", default="indices")
+
+    search_parser = subparsers.add_parser("search", help="Run nearest-neighbor search")
+    search_subparsers = search_parser.add_subparsers(dest="search_command", required=True)
+    search_query = search_subparsers.add_parser("query", help="Search by query audio")
+    search_query.add_argument("input_manifest")
+    search_query.add_argument("query_audio")
+    search_query.add_argument("--top-k", type=int, default=5)
+    search_query.add_argument("--index-artifact-id", default=None)
 
     manifest_parser = subparsers.add_parser("manifest", help="Inspect or validate manifests")
     manifest_subparsers = manifest_parser.add_subparsers(dest="manifest_command", required=True)
@@ -100,6 +120,55 @@ def main(argv: list[str] | None = None) -> int:
             )
             for key, value in feature_manifest.summary().items():
                 print(f"{key}={value}")
+            return 0
+
+    if args.command == "index":
+        if args.index_command == "build":
+            manifest = load_dataset_manifest(args.input_manifest)
+            index_manifest = build_baseline_index(
+                manifest,
+                manifest_root=Path(args.input_manifest).parent,
+                output_manifest_path=args.output_manifest,
+                extractor_id=args.extractor_id,
+                distance_metric=DistanceMetric(args.distance_metric),
+                index_dir_name=args.index_dir,
+            )
+            print(f"Index OK: {args.output_manifest}")
+            print(
+                "dataset="
+                f"{index_manifest.dataset_name} version={index_manifest.dataset_version}"
+            )
+            for key, value in index_manifest.summary().items():
+                print(f"{key}={value}")
+            return 0
+
+    if args.command == "search":
+        if args.search_command == "query":
+            manifest = load_dataset_manifest(args.input_manifest)
+            query, hits = search_baseline_index(
+                manifest,
+                manifest_root=Path(args.input_manifest).parent,
+                query_audio_path=args.query_audio,
+                top_k=args.top_k,
+                index_artifact_id=args.index_artifact_id,
+            )
+            print(f"Search OK: {args.query_audio}")
+            print(f"query_id={query.query_id}")
+            for hit in hits:
+                score = f"{hit.score:.6f}" if hit.score is not None else "na"
+                distance = f"{hit.distance:.6f}" if hit.distance is not None else "na"
+                print(
+                    " | ".join(
+                        (
+                            f"rank={hit.rank}",
+                            f"score={score}",
+                            f"distance={distance}",
+                            f"source_clip_id={hit.source_clip_id}",
+                            f"content_group_id={hit.content_group_id}",
+                            f"preview_uri={hit.preview_uri or ''}",
+                        )
+                    )
+                )
             return 0
 
     if args.command == "manifest":

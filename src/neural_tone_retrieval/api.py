@@ -14,6 +14,7 @@ from neural_tone_retrieval.catalog import (
 )
 from neural_tone_retrieval.feature_extraction import build_feature_manifest, extract_baseline_wav_features
 from neural_tone_retrieval.ingest import ingest_dataset_directory, inspect_wav_file, load_sidecar_metadata
+from neural_tone_retrieval.indexing import build_baseline_index, search_baseline_index
 from neural_tone_retrieval.schemas import (
     ArtifactFormat,
     ArtifactRecord,
@@ -173,6 +174,7 @@ __all__ = [
     "SplitName",
     "StageType",
     "build_content_split_assignments",
+    "build_baseline_index",
     "build_feature_manifest",
     "create_chain_spec",
     "create_chain_stage",
@@ -188,4 +190,5 @@ __all__ = [
     "resolve_render_split",
     "resolve_source_clip_split",
     "save_dataset_manifest",
+    "search_baseline_index",
 ]

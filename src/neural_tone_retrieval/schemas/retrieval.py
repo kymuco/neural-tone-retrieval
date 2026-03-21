@@ -127,11 +127,11 @@ class SearchQuery(RecordMixin):
 class SearchHit(RecordMixin):
     query_id: str
     rank: int
-    candidate_render_id: str
     candidate_artifact_id: str
     source_clip_id: str
     content_group_id: str
-    chain_id: str
+    candidate_render_id: str | None = None
+    chain_id: str | None = None
     score: float | None = None
     distance: float | None = None
     amp_family: str | None = None
@@ -145,7 +145,7 @@ class SearchHit(RecordMixin):
         object.__setattr__(
             self,
             "candidate_render_id",
-            require_non_empty(self.candidate_render_id, "candidate_render_id"),
+            normalize_optional_string(self.candidate_render_id, "candidate_render_id"),
         )
         object.__setattr__(
             self,
@@ -162,7 +162,7 @@ class SearchHit(RecordMixin):
             "content_group_id",
             require_non_empty(self.content_group_id, "content_group_id"),
         )
-        object.__setattr__(self, "chain_id", require_non_empty(self.chain_id, "chain_id"))
+        object.__setattr__(self, "chain_id", normalize_optional_string(self.chain_id, "chain_id"))
         object.__setattr__(self, "amp_family", normalize_optional_string(self.amp_family, "amp_family"))
         object.__setattr__(self, "cab_family", normalize_optional_string(self.cab_family, "cab_family"))
         object.__setattr__(

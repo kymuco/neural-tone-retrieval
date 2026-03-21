@@ -8,6 +8,7 @@ from pathlib import Path
 from neural_tone_retrieval.api import (
     build_baseline_index,
     build_feature_manifest,
+    build_render_manifest,
     DistanceMetric,
     ingest_dataset_directory,
     load_controlled_reamp_config,
@@ -31,6 +32,20 @@ def build_parser() -> argparse.ArgumentParser:
     dataset_ingest.add_argument("--pattern", default="*.wav")
     dataset_ingest.add_argument("--non-recursive", action="store_true")
     dataset_ingest.add_argument("--compute-sha256", action="store_true")
+
+    render_parser = subparsers.add_parser("render", help="Build rendered clips from source clips and chains")
+    render_subparsers = render_parser.add_subparsers(dest="render_command", required=True)
+    render_build = render_subparsers.add_parser(
+        "build",
+        help="Render source clips through chain specs into rendered audio artifacts",
+    )
+    render_build.add_argument("input_manifest")
+    render_build.add_argument("audio_root")
+    render_build.add_argument("output_manifest")
+    render_build.add_argument("--render-dir", default="renders")
+    render_build.add_argument("--chain-id", action="append", default=[])
+    render_build.add_argument("--peak-target-dbfs", type=float, default=-1.0)
+    render_build.add_argument("--tail-sec", type=float, default=0.0)
 
     features_parser = subparsers.add_parser("features", help="Extract baseline audio features")
     features_subparsers = features_parser.add_subparsers(dest="features_command", required=True)
@@ -100,6 +115,27 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Ingest OK: {args.output_manifest}")
             print(f"dataset={manifest.dataset_name} version={manifest.dataset_version}")
             for key, value in manifest.summary().items():
+                print(f"{key}={value}")
+            return 0
+
+    if args.command == "render":
+        if args.render_command == "build":
+            manifest = load_dataset_manifest(args.input_manifest)
+            render_manifest = build_render_manifest(
+                manifest,
+                audio_root=args.audio_root,
+                output_manifest_path=args.output_manifest,
+                render_dir_name=args.render_dir,
+                include_chain_ids=tuple(args.chain_id),
+                peak_target_dbfs=args.peak_target_dbfs,
+                tail_sec=args.tail_sec,
+            )
+            print(f"Render OK: {args.output_manifest}")
+            print(
+                "dataset="
+                f"{render_manifest.dataset_name} version={render_manifest.dataset_version}"
+            )
+            for key, value in render_manifest.summary().items():
                 print(f"{key}={value}")
             return 0
 

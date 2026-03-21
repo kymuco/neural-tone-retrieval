@@ -5,7 +5,12 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from neural_tone_retrieval.api import ingest_dataset_directory, load_controlled_reamp_config, load_dataset_manifest
+from neural_tone_retrieval.api import (
+    build_feature_manifest,
+    ingest_dataset_directory,
+    load_controlled_reamp_config,
+    load_dataset_manifest,
+)
 from neural_tone_retrieval.examples import write_example_bundle
 
 
@@ -23,6 +28,18 @@ def build_parser() -> argparse.ArgumentParser:
     dataset_ingest.add_argument("--pattern", default="*.wav")
     dataset_ingest.add_argument("--non-recursive", action="store_true")
     dataset_ingest.add_argument("--compute-sha256", action="store_true")
+
+    features_parser = subparsers.add_parser("features", help="Extract baseline audio features")
+    features_subparsers = features_parser.add_subparsers(dest="features_command", required=True)
+    features_extract = features_subparsers.add_parser(
+        "extract",
+        help="Build feature artifacts from a source manifest",
+    )
+    features_extract.add_argument("input_manifest")
+    features_extract.add_argument("audio_root")
+    features_extract.add_argument("output_manifest")
+    features_extract.add_argument("--extractor-id", default="baseline-handcrafted-v1")
+    features_extract.add_argument("--feature-dir", default="features")
 
     manifest_parser = subparsers.add_parser("manifest", help="Inspect or validate manifests")
     manifest_subparsers = manifest_parser.add_subparsers(dest="manifest_command", required=True)
@@ -63,6 +80,25 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Ingest OK: {args.output_manifest}")
             print(f"dataset={manifest.dataset_name} version={manifest.dataset_version}")
             for key, value in manifest.summary().items():
+                print(f"{key}={value}")
+            return 0
+
+    if args.command == "features":
+        if args.features_command == "extract":
+            manifest = load_dataset_manifest(args.input_manifest)
+            feature_manifest = build_feature_manifest(
+                manifest,
+                audio_root=args.audio_root,
+                output_manifest_path=args.output_manifest,
+                extractor_id=args.extractor_id,
+                feature_dir_name=args.feature_dir,
+            )
+            print(f"Features OK: {args.output_manifest}")
+            print(
+                "dataset="
+                f"{feature_manifest.dataset_name} version={feature_manifest.dataset_version}"
+            )
+            for key, value in feature_manifest.summary().items():
                 print(f"{key}={value}")
             return 0
 

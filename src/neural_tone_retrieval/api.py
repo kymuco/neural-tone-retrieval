@@ -12,6 +12,7 @@ from neural_tone_retrieval.catalog import (
     resolve_render_split,
     resolve_source_clip_split,
 )
+from neural_tone_retrieval.feature_extraction import build_feature_manifest, extract_baseline_wav_features
 from neural_tone_retrieval.ingest import ingest_dataset_directory, inspect_wav_file, load_sidecar_metadata
 from neural_tone_retrieval.schemas import (
     ArtifactFormat,
@@ -23,6 +24,7 @@ from neural_tone_retrieval.schemas import (
     DatasetSection,
     DistanceMetric,
     EmbeddingRecord,
+    FeatureRecord,
     FeatureSet,
     QueryType,
     RenderRecord,
@@ -70,6 +72,7 @@ def create_dataset_manifest(
     source_clips: Iterable[SourceClipRecord] = (),
     chain_specs: Iterable[ChainSpec] = (),
     renders: Iterable[RenderRecord] = (),
+    features: Iterable[FeatureRecord] = (),
     embeddings: Iterable[EmbeddingRecord] = (),
     split_assignments: Iterable[SplitAssignment] = (),
     runs: Iterable[RunRecord] = (),
@@ -81,6 +84,7 @@ def create_dataset_manifest(
         source_clips=tuple(source_clips),
         chain_specs=tuple(chain_specs),
         renders=tuple(renders),
+        features=tuple(features),
         embeddings=tuple(embeddings),
         split_assignments=tuple(split_assignments),
         runs=tuple(runs),
@@ -152,6 +156,7 @@ __all__ = [
     "DatasetManifest",
     "DistanceMetric",
     "EmbeddingRecord",
+    "FeatureRecord",
     "FeatureSet",
     "QueryType",
     "RenderRecord",
@@ -168,10 +173,12 @@ __all__ = [
     "SplitName",
     "StageType",
     "build_content_split_assignments",
+    "build_feature_manifest",
     "create_chain_spec",
     "create_chain_stage",
     "create_dataset_manifest",
     "create_registry",
+    "extract_baseline_wav_features",
     "ingest_dataset_directory",
     "inspect_wav_file",
     "load_controlled_reamp_config",

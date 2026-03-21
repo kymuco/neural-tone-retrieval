@@ -10,6 +10,7 @@ from .dataset import (
     SplitGroupType,
     SplitName,
 )
+from .features import FeatureRecord
 from .retrieval import DistanceMetric, EmbeddingRecord, QueryType, SearchHit, SearchQuery
 from .runs import RunRecord, RunStatus, RunType
 
@@ -23,6 +24,7 @@ __all__ = [
     "DatasetSection",
     "DistanceMetric",
     "EmbeddingRecord",
+    "FeatureRecord",
     "FeatureSet",
     "QueryType",
     "RenderRecord",

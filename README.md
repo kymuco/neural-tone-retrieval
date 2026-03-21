@@ -76,6 +76,7 @@ python -m neural_tone_retrieval init-example examples/controlled_reamp
 python -m neural_tone_retrieval manifest show examples/controlled_reamp/example_dataset_manifest.json
 python -m neural_tone_retrieval config show examples/controlled_reamp/controlled_reamp.toml
 python -m neural_tone_retrieval dataset ingest data/raw manifests/source_manifest.json
+python -m neural_tone_retrieval features extract manifests/source_manifest.json data/raw manifests/features_manifest.json
 ```
 
 Optional sidecar metadata can live next to a WAV file as `clip.json` and may include fields such as:

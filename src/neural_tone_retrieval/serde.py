@@ -18,6 +18,7 @@ from neural_tone_retrieval.schemas import (
     DatasetSection,
     DistanceMetric,
     EmbeddingRecord,
+    FeatureRecord,
     FeatureSet,
     QueryType,
     RenderRecord,
@@ -60,6 +61,7 @@ def dataset_manifest_from_dict(payload: dict[str, object]) -> DatasetManifest:
         source_clips=tuple(source_clip_from_dict(item) for item in _require_list(payload, "source_clips")),
         chain_specs=tuple(chain_spec_from_dict(item) for item in _require_list(payload, "chain_specs")),
         renders=tuple(render_from_dict(item) for item in _require_list(payload, "renders")),
+        features=tuple(feature_from_dict(item) for item in _require_list(payload, "features")),
         embeddings=tuple(
             embedding_from_dict(item) for item in _require_list(payload, "embeddings")
         ),
@@ -303,6 +305,24 @@ def embedding_from_dict(payload: object) -> EmbeddingRecord:
         embedding_id=_get_str(mapping, "embedding_id", default=""),
         checkpoint_id=_optional_str(mapping.get("checkpoint_id"), "embedding.checkpoint_id"),
         normalized=_get_bool(mapping, "normalized", default=True),
+        split=SplitName(split) if split is not None else None,
+        created_at=_parse_datetime(mapping["created_at"]),
+    )
+
+
+def feature_from_dict(payload: object) -> FeatureRecord:
+    mapping = _as_mapping(payload, "feature")
+    split = mapping.get("split")
+    return FeatureRecord(
+        artifact_id=_require_str(mapping["artifact_id"], "feature.artifact_id"),
+        subject_artifact_id=_require_str(
+            mapping["subject_artifact_id"],
+            "feature.subject_artifact_id",
+        ),
+        extractor_id=_require_str(mapping["extractor_id"], "feature.extractor_id"),
+        feature_id=_get_str(mapping, "feature_id", default=""),
+        feature_set=_get_str(mapping, "feature_set", default="baseline_handcrafted"),
+        feature_count=_get_int(mapping, "feature_count", default=0),
         split=SplitName(split) if split is not None else None,
         created_at=_parse_datetime(mapping["created_at"]),
     )

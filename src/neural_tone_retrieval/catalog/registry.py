@@ -8,6 +8,7 @@ from neural_tone_retrieval.catalog.manifests import DatasetManifest
 from neural_tone_retrieval.schemas.artifacts import ArtifactRecord
 from neural_tone_retrieval.schemas.chains import ChainSpec
 from neural_tone_retrieval.schemas.dataset import RenderRecord, SourceClipRecord, SplitAssignment
+from neural_tone_retrieval.schemas.features import FeatureRecord
 from neural_tone_retrieval.schemas.retrieval import EmbeddingRecord
 from neural_tone_retrieval.schemas.runs import RunRecord
 from neural_tone_retrieval.settings import DEFAULT_DATASET_NAME, DEFAULT_DATASET_VERSION
@@ -38,6 +39,7 @@ class CatalogRegistry:
         self._source_clips = list(manifest.source_clips)
         self._chain_specs = list(manifest.chain_specs)
         self._renders = list(manifest.renders)
+        self._features = list(manifest.features)
         self._embeddings = list(manifest.embeddings)
         self._split_assignments = list(manifest.split_assignments)
         self._runs = list(manifest.runs)
@@ -46,6 +48,7 @@ class CatalogRegistry:
         self._source_clip_index = {record.source_clip_id: record for record in self._source_clips}
         self._chain_index = {record.chain_id: record for record in self._chain_specs}
         self._render_index = {record.render_id: record for record in self._renders}
+        self._feature_index = {record.feature_id: record for record in self._features}
         self._embedding_index = {record.embedding_id: record for record in self._embeddings}
         self._split_index = {record.key: record for record in self._split_assignments}
         self._run_index = {record.run_id: record for record in self._runs}
@@ -60,6 +63,7 @@ class CatalogRegistry:
             source_clips=tuple(self._source_clips),
             chain_specs=tuple(self._chain_specs),
             renders=tuple(self._renders),
+            features=tuple(self._features),
             embeddings=tuple(self._embeddings),
             split_assignments=tuple(self._split_assignments),
             runs=tuple(self._runs),
@@ -83,6 +87,12 @@ class CatalogRegistry:
         self._require_known(record.source_clip_id, self._source_clip_index, "source_clip_id")
         self._require_known(record.chain_id, self._chain_index, "chain_id")
         self._add_unique(record.render_id, record, self._render_index, self._renders)
+        return record
+
+    def add_feature(self, record: FeatureRecord) -> FeatureRecord:
+        self._require_known(record.artifact_id, self._artifact_index, "artifact_id")
+        self._require_known(record.subject_artifact_id, self._artifact_index, "subject_artifact_id")
+        self._add_unique(record.feature_id, record, self._feature_index, self._features)
         return record
 
     def add_embedding(self, record: EmbeddingRecord) -> EmbeddingRecord:
@@ -123,6 +133,9 @@ class CatalogRegistry:
             self._require_known(record.artifact_id, self._artifact_index, "artifact_id")
             self._require_known(record.source_clip_id, self._source_clip_index, "source_clip_id")
             self._require_known(record.chain_id, self._chain_index, "chain_id")
+        for record in self._features:
+            self._require_known(record.artifact_id, self._artifact_index, "artifact_id")
+            self._require_known(record.subject_artifact_id, self._artifact_index, "subject_artifact_id")
         for record in self._embeddings:
             self._require_known(record.artifact_id, self._artifact_index, "artifact_id")
             self._require_known(record.subject_artifact_id, self._artifact_index, "subject_artifact_id")

@@ -60,6 +60,23 @@ The repository now includes the first schema and registry layer:
 - `catalog/` for manifests, split propagation, and in-memory validation/indexing
 - `api.py` as the stable public Python surface for future CLI and service layers
 
+## Controlled Re-Amp Bootstrap
+
+The repository now includes:
+
+- tracked example manifests and configs for a controlled re-amp workflow
+- JSON serialization for dataset manifests
+- TOML configuration loading for controlled re-amp and retrieval runs
+- a thin `ntr` CLI for example generation and validation
+
+Example commands:
+
+```bash
+python -m neural_tone_retrieval init-example examples/controlled_reamp
+python -m neural_tone_retrieval manifest show examples/controlled_reamp/example_dataset_manifest.json
+python -m neural_tone_retrieval config show examples/controlled_reamp/controlled_reamp.toml
+```
+
 ## Licensing
 
 - Source code in this repository is licensed under Apache-2.0. See `LICENSE`.

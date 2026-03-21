@@ -2,6 +2,7 @@
 
 from .artifacts import ArtifactFormat, ArtifactRecord, ArtifactType
 from .chains import ChainSpec, ChainStage, StageType
+from .configs import ControlledReampConfig, DatasetSection, FeatureSet, RenderSection, RetrievalSection
 from .dataset import (
     RenderRecord,
     SourceClipRecord,
@@ -18,13 +19,18 @@ __all__ = [
     "ArtifactType",
     "ChainSpec",
     "ChainStage",
+    "ControlledReampConfig",
+    "DatasetSection",
     "DistanceMetric",
     "EmbeddingRecord",
+    "FeatureSet",
     "QueryType",
     "RenderRecord",
+    "RenderSection",
     "RunRecord",
     "RunStatus",
     "RunType",
+    "RetrievalSection",
     "SearchHit",
     "SearchQuery",
     "SourceClipRecord",

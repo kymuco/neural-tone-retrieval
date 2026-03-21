@@ -28,6 +28,9 @@ classifiers = [
 [project.optional-dependencies]
 dev = ["pytest>=9"]
 
+[project.scripts]
+ntr = "neural_tone_retrieval.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

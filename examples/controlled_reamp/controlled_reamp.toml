@@ -1,0 +1,26 @@
+config_version = "v1"
+
+[dataset]
+name = "neural-tone-retrieval-dev"
+version = "0.1.0"
+manifest_uri = "./example_dataset_manifest.json"
+raw_di_root = "../../data/raw"
+output_root = "../../artifacts/dev"
+split_protocol_id = "content_disjoint_v1"
+selected_splits = ["train", "val", "test"]
+
+[render]
+target_sample_rate_hz = 44100
+normalize_input = true
+peak_target_dbfs = -1
+tail_sec = 0.25
+include_chain_ids = []
+
+[retrieval]
+feature_sets = ["mel", "mfcc", "spectral"]
+embedding_model_id = "baseline-handcrafted-v1"
+distance_metric = "cosine"
+top_k = 5
+
+[notes]
+description = "Example controlled re-amp and retrieval bootstrap config."
